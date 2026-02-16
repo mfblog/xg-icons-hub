@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { getIcons } = require('./server/services/iconScanner');
+const { applyHtml } = require('./server/services/htmlTemplate');
 
 const DIST_DIR = path.join(__dirname, 'dist');
 const API_DIR = path.join(DIST_DIR, 'api');
@@ -72,27 +73,7 @@ if (fs.existsSync(srcImages)) {
 
 // 4. Copy and Process HTML
 let html = fs.readFileSync(path.join(__dirname, 'views/index.html'), 'utf-8');
-const name = (config.SITE_NAME || 'XG-icons').trim();
-let logo = config.LOGO_IMG || 'favicon.ico';
-if (!/^https?:\/\//.test(logo)) {
-    logo = logo === 'favicon.ico' ? '/static/favicon.ico' : (logo.startsWith('/') ? logo : `/${logo}`);
-}
-let favicon = config.FAVICON || 'favicon.ico';
-if (!/^https?:\/\//.test(favicon)) {
-    favicon = favicon === 'favicon.ico' ? '/static/favicon.ico' : (favicon.startsWith('/') ? favicon : `/${favicon}`);
-}
-html = html.replace(/<title>.*?<\/title>/i, `<title>${name}</title>`);
-html = html.replace(/<h1 id="siteTitle">.*?<\/h1>/i, `<h1 id="siteTitle">${name}</h1>`);
-html = html.replace(/(<img id="siteLogo"[^>]*\bsrc=")[^"]*"/i, `$1${logo}"`);
-html = html.replace(/(<link id="faviconLink"[^>]*\bhref=")[^"]*"/i, `$1${favicon}"`);
-if (/name="description"/i.test(html)) {
-    html = html.replace(/<meta name="description"[^>]*content="[^"]*"[^>]*>/i, `<meta name="description" content="${config.SEO_DESC}">`);
-} else {
-    html = html.replace(/<\/title>/i, `</title>\n    <meta name="description" content="${config.SEO_DESC}">`);
-}
-const footerContent = config.COPYRIGHT + (config.ICP ? `<br><a id="icpLink" href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer nofollow">${config.ICP}</a>` : '');
-html = html.replace(/(<footer id="siteFooter"[^>]*>)[\s\S]*?(<\/footer>)/i, `$1${footerContent}$2`);
-html = html.replace(/(<footer id="mobileFooter"[^>]*>)[\s\S]*?(<\/footer>)/i, `$1${footerContent}$2`);
+html = applyHtml(html, config);
 fs.writeFileSync(path.join(DIST_DIR, 'index.html'), html);
 console.log('Copied index.html');
 
