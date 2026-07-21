@@ -17,34 +17,51 @@
                     <img id="siteLogo" src="/static/favicon.ico" alt="Logo" class="logo-img">
                     <h1 id="siteTitle">XG-icons</h1>
                 </div>
-                
-                <!-- Theme Toggle (Now shared for Desktop/Mobile) -->
+
+                <!-- Theme Toggle -->
                 <div class="controls">
-                    <button id="themeToggle" class="btn-icon" title="深浅色切换">
-                        🌓
+                    <button id="themeToggle" class="btn-icon" title="深浅色切换" aria-label="切换深浅色主题">
+                        <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="4"></circle>
+                            <path d="M12 2v2"></path>
+                            <path d="M12 20v2"></path>
+                            <path d="m4.93 4.93 1.41 1.41"></path>
+                            <path d="m17.66 17.66 1.41 1.41"></path>
+                            <path d="M2 12h2"></path>
+                            <path d="M20 12h2"></path>
+                            <path d="m6.34 17.66-1.41 1.41"></path>
+                            <path d="m19.07 4.93-1.41 1.41"></path>
+                        </svg>
+                        <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+                        </svg>
                     </button>
                 </div>
             </div>
-            
+
             <div class="search-row">
                 <!-- Mobile Category Dropdown -->
                 <div class="mobile-category-wrapper hidden-desktop">
-                    <select id="mobileCategorySelect" class="category-select">
+                    <select id="mobileCategorySelect" class="category-select" aria-label="选择分类">
                         <!-- Options injected by JS -->
                     </select>
                 </div>
 
                 <div class="search-box">
                     <div class="input-wrapper">
-                        <input type="text" id="searchInput" placeholder="搜索图标...">
-                        <button id="clearSearch" class="clear-btn hidden" title="清空">✕</button>
+                        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.3-4.3"></path>
+                        </svg>
+                        <input type="text" id="searchInput" placeholder="搜索图标..." aria-label="搜索图标">
+                        <button id="clearSearch" class="clear-btn hidden" title="清空" aria-label="清空搜索">✕</button>
                     </div>
                 </div>
             </div>
 
-            <nav class="category-nav hidden-mobile">
+            <nav class="category-nav hidden-mobile" aria-label="分类导航">
                 <ul id="categoryList">
-                    <!-- (Deprecated on desktop) Categories will be injected here if needed -->
+                    <!-- Categories will be injected here -->
                 </ul>
             </nav>
 
@@ -58,18 +75,22 @@
             <div id="iconGrid" class="icon-grid">
                 <!-- Icons will be injected here -->
             </div>
-            
+
             <div id="loading" class="loading">加载中...</div>
             <div id="emptyState" class="empty-state hidden">没有找到匹配的图标</div>
 
-            <button id="backToTop" class="back-to-top hidden" title="回到顶部">👆</button>
-            
+            <button id="backToTop" class="back-to-top hidden" title="回到顶部" aria-label="回到顶部">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="m18 15-6-6-6 6"></path>
+                </svg>
+            </button>
+
             <footer id="mobileFooter" class="site-footer mobile-footer hidden-desktop"></footer>
         </main>
     </div>
 
     <!-- Toast Notification -->
-    <div id="toast" class="toast hidden">已复制链接!</div>
+    <div id="toast" class="toast hidden" role="status" aria-live="polite">已复制链接!</div>
 
     <script src="/static/script.js"></script>
 </body>

@@ -200,6 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 4. Render Icons
     function renderIcons() {
         iconGrid.innerHTML = '';
+        cardIndex = 0; // Reset stagger index on re-render
         const query = searchInput.value.toLowerCase();
         let hasResults = false;
 
@@ -238,13 +239,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    let cardIndex = 0;
+
     function createIconCard(category, filename) {
         const div = document.createElement('div');
         div.className = 'icon-card';
-        
+
+        // Staggered entrance animation delay (max 300ms)
+        const delay = Math.min(cardIndex * 20, 300);
+        div.style.animationDelay = `${delay}ms`;
+        cardIndex++;
+
         // Construct URL
         const url = `${window.location.origin}/images/${category}/${filename}`;
-        
+
         // Display Name (hide extension)
         const displayName = filename.replace(/\.[^/.]+$/, "");
 
