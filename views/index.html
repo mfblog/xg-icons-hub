@@ -9,6 +9,12 @@
     <link id="faviconLink" rel="icon" href="/static/favicon.ico">
 </head>
 <body>
+    <!-- Background Decoration Layer -->
+    <div class="bg-decoration" aria-hidden="true">
+        <div class="blob"></div>
+        <div class="grid-texture"></div>
+    </div>
+
     <div class="app-container">
         <!-- Sidebar / Header -->
         <aside class="sidebar">
@@ -40,9 +46,9 @@
             </div>
 
             <div class="search-row">
-                <!-- Mobile Category Dropdown -->
-                <div class="mobile-category-wrapper hidden-desktop">
-                    <select id="mobileCategorySelect" class="category-select" aria-label="选择分类">
+                <!-- Mobile Category Dropdown (kept for JS state sync, visually hidden) -->
+                <div class="mobile-category-wrapper hidden-desktop" hidden>
+                    <select id="mobileCategorySelect" class="category-select" aria-label="选择分类" tabindex="-1">
                         <!-- Options injected by JS -->
                     </select>
                 </div>
@@ -59,7 +65,15 @@
                 </div>
             </div>
 
+            <!-- Mobile horizontal category pills -->
+            <nav class="mobile-category-pills hidden-desktop" aria-label="分类导航">
+                <ul id="mobileCategoryPills">
+                    <!-- Pills injected by JS -->
+                </ul>
+            </nav>
+
             <nav class="category-nav hidden-mobile" aria-label="分类导航">
+                <div class="nav-section-title">分类</div>
                 <ul id="categoryList">
                     <!-- Categories will be injected here -->
                 </ul>

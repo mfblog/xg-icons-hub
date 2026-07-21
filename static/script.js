@@ -93,11 +93,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const siteLogoEl = document.getElementById('siteLogo');
     const siteTitleEl = document.getElementById('siteTitle');
 
+    const mobileCategoryPills = document.getElementById('mobileCategoryPills');
+
     function renderCategories() {
         // Clear existing
         if (categoryList) categoryList.innerHTML = '';
         if (topCategoryList) topCategoryList.innerHTML = '';
         mobileCategorySelect.innerHTML = '';
+        if (mobileCategoryPills) mobileCategoryPills.innerHTML = '';
 
         // Add "All" option for Desktop
         const allText = `全部 (${allIcons.reduce((sum, cat) => sum + cat.icons.length, 0)})`;
@@ -105,6 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (topCategoryList) {
             allLi = document.createElement('li');
             allLi.textContent = allText;
+            allLi.dataset.category = 'all';
             allLi.classList.add('active');
             allLi.addEventListener('click', () => {
                 switchCategory('all', allLi);
@@ -113,6 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (categoryList) {
             allLi = document.createElement('li');
             allLi.textContent = allText;
+            allLi.dataset.category = 'all';
             allLi.classList.add('active');
             allLi.addEventListener('click', () => {
                 switchCategory('all', allLi);
@@ -125,6 +130,18 @@ document.addEventListener('DOMContentLoaded', () => {
         allOption.value = 'all';
         allOption.textContent = '全部';
         mobileCategorySelect.appendChild(allOption);
+
+        // Mobile pill: "All"
+        if (mobileCategoryPills) {
+            const allPill = document.createElement('li');
+            allPill.textContent = '全部';
+            allPill.dataset.category = 'all';
+            allPill.classList.add('active');
+            allPill.addEventListener('click', () => {
+                switchCategory('all', allLi || allPill);
+            });
+            mobileCategoryPills.appendChild(allPill);
+        }
 
         allIcons.forEach(cat => {
             // Desktop List Item(s)
@@ -153,6 +170,18 @@ document.addEventListener('DOMContentLoaded', () => {
             option.value = cat.name;
             option.textContent = cat.name;
             mobileCategorySelect.appendChild(option);
+
+            // Mobile Pill
+            if (mobileCategoryPills) {
+                const pill = document.createElement('li');
+                pill.textContent = cat.name;
+                pill.dataset.category = cat.name;
+                pill.addEventListener('click', () => {
+                    const target = Array.from((categoryList || topCategoryList)?.children || []).find(li => li.dataset.category === cat.name);
+                    switchCategory(cat.name, target || pill);
+                });
+                mobileCategoryPills.appendChild(pill);
+            }
         });
         
         // Mobile Select Event Listener
@@ -195,6 +224,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateActiveCategory(activeElement) {
         document.querySelectorAll('.category-nav li, .top-category-nav li').forEach(el => el.classList.remove('active'));
         activeElement.classList.add('active');
+
+        // Sync mobile pills active state
+        if (mobileCategoryPills) {
+            const cat = activeElement.dataset && activeElement.dataset.category ? activeElement.dataset.category : 'all';
+            mobileCategoryPills.querySelectorAll('li').forEach(p => {
+                p.classList.toggle('active', p.dataset.category === cat);
+            });
+            // Scroll active pill into view
+            const activePill = mobileCategoryPills.querySelector('li.active');
+            if (activePill && activePill.scrollIntoView) {
+                activePill.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            }
+        }
     }
 
     // 4. Render Icons
