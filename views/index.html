@@ -41,10 +41,17 @@
                 </div>
 
                 <div class="search-row">
-                    <div class="mobile-category-wrapper hidden-desktop" hidden>
-                        <select id="mobileCategorySelect" class="category-select" aria-label="选择分类" tabindex="-1">
+                    <div class="mobile-category-wrapper hidden-desktop">
+                        <select id="mobileCategorySelect" class="category-select-native" tabindex="-1" aria-hidden="true">
                             <!-- Options injected by JS -->
                         </select>
+                        <button id="mobileCategoryTrigger" class="category-select" type="button" aria-label="选择分类" aria-haspopup="listbox" aria-expanded="false" aria-controls="mobileCategoryMenu">
+                            <span id="mobileCategoryLabel" class="category-select-label">全部</span>
+                            <svg class="mobile-category-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="m9 18 6-6-6-6"></path>
+                            </svg>
+                        </button>
+                        <div id="mobileCategoryMenu" class="mobile-category-menu hidden" role="listbox" aria-label="选择分类"></div>
                     </div>
 
                     <div class="search-box">
@@ -54,19 +61,20 @@
                                 <path d="m21 21-4.3-4.3"></path>
                             </svg>
                             <input type="text" id="searchInput" placeholder="搜索图标" aria-label="搜索图标">
-                            <button id="clearSearch" class="clear-btn hidden" title="清空" aria-label="清空搜索">×</button>
+                            <button id="searchShortcut" class="search-shortcut" type="button" title="快捷搜索" aria-label="快捷搜索">
+                                <kbd>⌘K</kbd>
+                            </button>
+                            <button id="clearSearch" class="clear-btn hidden" title="清空" aria-label="清空搜索">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                                    <path d="M18 6 6 18"></path>
+                                    <path d="m6 6 12 12"></path>
+                                </svg>
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                <nav class="mobile-category-pills hidden-desktop" aria-label="分类导航">
-                    <ul id="mobileCategoryPills">
-                        <!-- Pills injected by JS -->
-                    </ul>
-                </nav>
-
                 <nav class="category-nav hidden-mobile" aria-label="分类导航">
-                    <div class="nav-section-title">分类</div>
                     <ul id="categoryList" class="category-list">
                         <!-- Categories will be injected here -->
                     </ul>
@@ -79,27 +87,26 @@
 
             <main class="main-content">
                 <header class="content-header">
-                    <div class="content-title-group">
-                        <p class="content-eyebrow">图标资源库</p>
-                        <h2 id="currentViewTitle">全部图标</h2>
-                    </div>
+                    <h2 id="currentViewTitle" tabindex="-1">全部图标</h2>
                     <p id="resultSummary" class="result-summary" aria-live="polite">正在读取...</p>
                 </header>
 
-                <div id="iconGrid" class="icon-grid">
-                    <!-- Icons will be injected here -->
-                </div>
+                <div id="iconScrollArea" class="icon-scroll-area">
+                    <div id="iconGrid" class="icon-grid">
+                        <!-- Icons will be injected here -->
+                    </div>
 
-                <div id="loading" class="loading">加载中...</div>
-                <div id="emptyState" class="empty-state hidden">没有找到匹配的图标</div>
+                    <div id="loading" class="loading">加载中...</div>
+                    <div id="emptyState" class="empty-state hidden">没有找到匹配的图标</div>
+
+                    <footer id="mobileFooter" class="site-footer mobile-footer hidden-desktop"></footer>
+                </div>
 
                 <button id="backToTop" class="back-to-top hidden" title="回到顶部" aria-label="回到顶部">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="m18 15-6-6-6 6"></path>
                     </svg>
                 </button>
-
-                <footer id="mobileFooter" class="site-footer mobile-footer hidden-desktop"></footer>
             </main>
         </div>
     </div>

@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const categoryList = document.getElementById('categoryList');
     const topCategoryList = document.getElementById('topCategoryList');
     const searchInput = document.getElementById('searchInput');
+    const searchShortcut = document.getElementById('searchShortcut');
     const themeToggle = document.getElementById('themeToggle');
     const loading = document.getElementById('loading');
     const emptyState = document.getElementById('emptyState');
@@ -91,29 +92,37 @@ document.addEventListener('DOMContentLoaded', () => {
     // 3. Render Categories
     // Scroll Management
     let allCategoryScrollTop = 0;
-    const mainContent = document.querySelector('.main-content');
+    const iconScrollArea = document.getElementById('iconScrollArea');
     const mobileCategorySelect = document.getElementById('mobileCategorySelect');
+    const mobileCategoryWrapper = document.querySelector('.mobile-category-wrapper');
+    const mobileCategoryTrigger = document.getElementById('mobileCategoryTrigger');
+    const mobileCategoryLabel = document.getElementById('mobileCategoryLabel');
+    const mobileCategoryMenu = document.getElementById('mobileCategoryMenu');
     const siteLogoEl = document.getElementById('siteLogo');
     const siteTitleEl = document.getElementById('siteTitle');
 
     const mobileCategoryPills = document.getElementById('mobileCategoryPills');
+
+    function categoryItemMarkup(label, count) {
+        return `<button type="button" class="menu-link"><span class="menu-label">${label}</span><span class="menu-count">${count}</span></button>`;
+    }
 
     function renderCategories() {
         // Clear existing
         if (categoryList) categoryList.innerHTML = '';
         if (topCategoryList) topCategoryList.innerHTML = '';
         mobileCategorySelect.innerHTML = '';
+        mobileCategoryMenu.innerHTML = '';
         if (mobileCategoryPills) mobileCategoryPills.innerHTML = '';
 
         // Add "All" option for Desktop
         const totalCount = allIcons.reduce((sum, cat) => sum + cat.icons.length, 0);
-        const allText = `全部 (${totalCount})`;
         let allLi = null;
         if (topCategoryList) {
             allLi = document.createElement('li');
             allLi.dataset.category = 'all';
             allLi.classList.add('active');
-            allLi.innerHTML = `<button type="button" class="menu-link"><span class="menu-label">全部</span><span class="menu-count">${totalCount}</span></button>`;
+            allLi.innerHTML = categoryItemMarkup('全部', totalCount);
             allLi.addEventListener('click', () => {
                 switchCategory('all', allLi);
             });
@@ -122,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
             allLi = document.createElement('li');
             allLi.dataset.category = 'all';
             allLi.classList.add('active');
-            allLi.innerHTML = `<button type="button" class="menu-link"><span class="menu-label">全部</span><span class="menu-count">${totalCount}</span></button>`;
+            allLi.innerHTML = categoryItemMarkup('全部', totalCount);
             allLi.addEventListener('click', () => {
                 switchCategory('all', allLi);
             });
@@ -134,6 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
         allOption.value = 'all';
         allOption.textContent = '全部';
         mobileCategorySelect.appendChild(allOption);
+        appendMobileCategoryOption('全部', 'all');
 
         // Mobile pill: "All"
         if (mobileCategoryPills) {
@@ -170,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (categoryList) {
                 const liSide = document.createElement('li');
                 liSide.dataset.category = cat.name;
-                liSide.innerHTML = `<button type="button" class="menu-link"><span class="menu-label">${cat.name}</span><span class="menu-count">${cat.icons.length}</span></button>`;
+                liSide.innerHTML = categoryItemMarkup(cat.name, cat.icons.length);
                 liSide.addEventListener('click', () => {
                     switchCategory(cat.name, liSide);
                 });
@@ -182,6 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
             option.value = cat.name;
             option.textContent = cat.name;
             mobileCategorySelect.appendChild(option);
+            appendMobileCategoryOption(cat.name, cat.name);
 
             // Mobile Pill
             if (mobileCategoryPills) {
@@ -204,6 +215,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 mobileCategoryPills.appendChild(pill);
             }
         });
+
+        syncMobileCategoryMenu('all');
         
         // Mobile Select Event Listener
         mobileCategorySelect.addEventListener('change', (e) => {
@@ -218,10 +231,73 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function appendMobileCategoryOption(label, value) {
+        const option = document.createElement('button');
+        option.type = 'button';
+        option.className = 'mobile-category-option';
+        option.dataset.category = value;
+        option.setAttribute('role', 'option');
+        option.setAttribute('aria-selected', 'false');
+        option.textContent = label;
+        option.addEventListener('click', () => {
+            mobileCategorySelect.value = value;
+            mobileCategorySelect.dispatchEvent(new Event('change', { bubbles: true }));
+            closeMobileCategoryMenu();
+        });
+        mobileCategoryMenu.appendChild(option);
+    }
+
+    function syncMobileCategoryMenu(categoryName) {
+        const selectedOption = mobileCategoryMenu.querySelector(`[data-category="${CSS.escape(categoryName)}"]`);
+        if (mobileCategoryLabel) {
+            mobileCategoryLabel.textContent = selectedOption ? selectedOption.textContent : categoryName;
+        }
+        if (mobileCategoryTrigger) {
+            mobileCategoryTrigger.setAttribute('aria-label', `选择分类，当前为 ${categoryName === 'all' ? '全部' : categoryName}`);
+        }
+        mobileCategoryMenu.querySelectorAll('.mobile-category-option').forEach(option => {
+            const isSelected = option.dataset.category === categoryName;
+            option.classList.toggle('active', isSelected);
+            option.setAttribute('aria-selected', String(isSelected));
+        });
+    }
+
+    function setMobileCategoryMenuOpen(open) {
+        if (!mobileCategoryMenu || !mobileCategoryTrigger) return;
+        mobileCategoryMenu.classList.toggle('hidden', !open);
+        mobileCategoryTrigger.setAttribute('aria-expanded', String(open));
+    }
+
+    function closeMobileCategoryMenu() {
+        setMobileCategoryMenuOpen(false);
+    }
+
+    mobileCategoryTrigger.addEventListener('click', () => {
+        const isOpen = mobileCategoryTrigger.getAttribute('aria-expanded') === 'true';
+        setMobileCategoryMenuOpen(!isOpen);
+    });
+
+    mobileCategoryTrigger.addEventListener('keydown', event => {
+        if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            setMobileCategoryMenuOpen(true);
+        }
+    });
+
+    document.addEventListener('click', event => {
+        if (mobileCategoryWrapper && !mobileCategoryWrapper.contains(event.target)) {
+            closeMobileCategoryMenu();
+        }
+    });
+
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closeMobileCategoryMenu();
+    });
+
     function switchCategory(categoryName, activeElement) {
         // Save scroll position if we are currently on 'all'
         if (currentCategory === 'all') {
-            allCategoryScrollTop = mainContent.scrollTop;
+            allCategoryScrollTop = iconScrollArea.scrollTop;
         }
 
         currentCategory = categoryName;
@@ -231,16 +307,36 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Sync Mobile UI
         mobileCategorySelect.value = categoryName;
+        syncMobileCategoryMenu(categoryName);
 
         renderIcons();
 
         // Restore or Reset scroll position
         if (currentCategory === 'all') {
-            mainContent.scrollTop = allCategoryScrollTop;
+            iconScrollArea.scrollTop = allCategoryScrollTop;
         } else {
-            mainContent.scrollTop = 0;
+            iconScrollArea.scrollTop = 0;
         }
     }
+
+    window.__xgSelectCategory = (categoryName, filename) => {
+        const target = Array.from(categoryList?.children || []).find(li => li.dataset.category === categoryName);
+        if (!target) return false;
+        switchCategory(categoryName, target);
+
+        if (filename) {
+            const card = Array.from(iconGrid.children).find(item => item.dataset.filename === filename);
+            if (card) {
+                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                setTimeout(() => {
+                    if (!card.isConnected) return;
+                    card.classList.remove('locate-flash');
+                    requestAnimationFrame(() => card.classList.add('locate-flash'));
+                }, 550);
+            }
+        }
+        return true;
+    };
 
     function updateActiveCategory(activeElement) {
         document.querySelectorAll('.category-nav li, .top-category-nav li').forEach(el => el.classList.remove('active'));
@@ -295,7 +391,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (currentViewTitle) {
-            currentViewTitle.textContent = currentCategory === 'all' ? '全部图标' : currentCategory;
+            currentViewTitle.textContent = currentCategory === 'all' ? '全部图标' : `分类：${currentCategory}`;
         }
         if (resultSummary) {
             resultSummary.textContent = query ? `找到 ${resultCount} 个` : `${resultCount} 个图标`;
@@ -311,6 +407,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function createIconCard(category, filename) {
         const div = document.createElement('div');
         div.className = 'icon-card';
+        div.dataset.category = category;
+        div.dataset.filename = filename;
         div.setAttribute('role', 'button');
         div.setAttribute('tabindex', '0');
 
@@ -364,12 +462,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // 5. Search
     const clearSearchBtn = document.getElementById('clearSearch');
 
+    const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
+    const shortcutLabel = isMac ? '⌘K' : 'Ctrl K';
+    const shortcutKey = searchShortcut?.querySelector('kbd');
+    if (shortcutKey) shortcutKey.textContent = shortcutLabel;
+
+    function focusSearch() {
+        if (document.body.classList.contains('modal-open')) return;
+        searchInput.focus();
+        searchInput.select();
+    }
+
     function toggleClearBtn() {
-        if (searchInput.value.length > 0) {
-            clearSearchBtn.classList.remove('hidden');
-        } else {
-            clearSearchBtn.classList.add('hidden');
-        }
+        const hasValue = searchInput.value.length > 0;
+        clearSearchBtn.classList.toggle('hidden', !hasValue);
+        if (searchShortcut) searchShortcut.classList.toggle('hidden', hasValue);
     }
 
     searchInput.addEventListener('input', () => {
@@ -382,6 +489,14 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleClearBtn();
         renderIcons();
         searchInput.focus();
+    });
+
+    if (searchShortcut) searchShortcut.addEventListener('click', focusSearch);
+    document.addEventListener('keydown', (event) => {
+        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+            event.preventDefault();
+            focusSearch();
+        }
     });
 
     // 6. Copy to Clipboard
@@ -416,8 +531,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 7. Back to Top
     const backToTopBtn = document.getElementById('backToTop');
 
-    mainContent.addEventListener('scroll', () => {
-        if (mainContent.scrollTop > 300) {
+    iconScrollArea.addEventListener('scroll', () => {
+        if (iconScrollArea.scrollTop > 300) {
             backToTopBtn.classList.remove('hidden');
         } else {
             backToTopBtn.classList.add('hidden');
@@ -425,7 +540,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     backToTopBtn.addEventListener('click', () => {
-        mainContent.scrollTo({
+        iconScrollArea.scrollTo({
             top: 0,
             behavior: 'smooth'
         });
@@ -433,7 +548,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 8. Click Logo/Title to scroll to top
     function scrollTopViaLogo() {
-        mainContent.scrollTo({ top: 0, behavior: 'smooth' });
+        iconScrollArea.scrollTo({ top: 0, behavior: 'smooth' });
     }
     if (siteLogoEl) siteLogoEl.addEventListener('click', scrollTopViaLogo);
     if (siteTitleEl) siteTitleEl.addEventListener('click', scrollTopViaLogo);
