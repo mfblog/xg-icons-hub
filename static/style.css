@@ -434,62 +434,90 @@ body {
     user-select: none;
 }
 
-.category-nav ul {
-    list-style: none;
+/* daisyUI menu overrides — fuse with project glass tokens.
+   The <ul> carries daisyUI's `menu menu-sm`; we neutralize its default
+   box/background and re-skin items via .menu-link using our variables. */
+.category-nav .menu {
+    background-color: transparent !important;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    gap: 2px;
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    list-style: none;
 }
 
-.category-nav li {
-    padding: 8px 12px 8px 14px;
-    cursor: pointer;
+.category-nav .menu li {
+    padding: 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.category-nav .menu li > .menu-link {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 8px 12px;
     border-radius: var(--radius-md);
     color: var(--text-secondary);
     font-size: 13px;
     font-weight: 500;
-    transition: all var(--transition-fast);
-    position: relative;
-    display: flex;
-    align-items: center;
+    line-height: 1.4;
+    cursor: pointer;
+    transition: background-color var(--transition-fast), color var(--transition-fast),
+                transform var(--transition-fast), box-shadow var(--transition-fast);
     border: 1px solid transparent;
+    user-select: none;
 }
 
-/* Active indicator bar */
-.category-nav li::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%) scaleY(0);
-    width: 3px;
-    height: 16px;
-    border-radius: 999px;
-    background: var(--text-color);
-    transition: transform var(--transition-fast);
-}
-
-.category-nav li.active {
-    background-color: var(--card-bg);
-    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-    color: var(--text-color);
-    font-weight: 600;
-    border-color: var(--border-color);
-    box-shadow: inset 0 1px 0 var(--glass-highlight-soft), var(--shadow-sm);
-}
-
-.category-nav li.active::before {
-    transform: translateY(-50%) scaleY(1);
-}
-
-.category-nav li:hover:not(.active) {
+.category-nav .menu li:hover > .menu-link {
     background-color: var(--hover-bg);
     color: var(--text-color);
 }
 
-.category-nav li:active {
+.category-nav .menu li.active > .menu-link {
+    background-color: var(--primary-color);
+    color: var(--primary-contrast);
+    font-weight: 600;
+    border-color: transparent;
+    box-shadow: var(--shadow-sm);
+}
+
+.category-nav .menu li:active > .menu-link {
     transform: scale(0.98);
+}
+
+/* Count badge on the right */
+.category-nav .menu .menu-count {
+    flex-shrink: 0;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 600;
+    line-height: 18px;
+    text-align: center;
+    background-color: var(--primary-soft);
+    color: var(--text-secondary);
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.category-nav .menu li:hover .menu-count {
+    color: var(--text-color);
+}
+
+.category-nav .menu li.active .menu-count {
+    background-color: rgba(255, 255, 255, 0.22);
+    color: var(--primary-contrast);
+}
+
+[data-theme="dark"] .category-nav .menu li.active .menu-count {
+    background-color: rgba(0, 0, 0, 0.28);
 }
 
 /* ========== Main Content ========== */
@@ -544,9 +572,9 @@ body {
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-xs), inset 0 1px 0 var(--glass-highlight-soft);
-    /* Extra top padding reserves a band for the hover badge so it never
-       overlaps the icon, and the icon+name group sits visually centered */
-    padding: 26px 10px 14px;
+    /* Top padding reserves room for the top-left hover badge and nudges the
+       icon+name group down so the zoomed icon never overlaps the badge */
+    padding: 32px 10px 14px;
     min-height: 124px;
     display: flex;
     flex-direction: column;
@@ -576,6 +604,15 @@ body {
     box-shadow: var(--shadow-md), inset 0 1px 0 var(--glass-highlight);
 }
 
+/* Light mode: a touch more pronounced hover focus */
+html:not([data-theme="dark"]) .icon-card:hover {
+    transform: translateY(-3px);
+    background-color: rgba(255, 255, 255, 0.92);
+    border-color: rgba(24, 24, 27, 0.2);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.06), 0 16px 32px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
 .icon-card:active {
     transform: scale(0.97);
     box-shadow: var(--shadow-xs), inset 0 1px 0 var(--glass-highlight-soft);
@@ -589,7 +626,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 9px;
+    margin-bottom: 5px;
     position: relative;
     flex-shrink: 0;
 }
@@ -642,26 +679,29 @@ body {
     max-height: 100%;
 }
 
-/* Category badge - sits in the reserved top band, centered, never overlaps icon */
+/* Category badge - top-left corner pill (frosted), never overlaps the zoomed icon */
 .icon-category-badge {
     display: none;
     position: absolute;
-    top: 6px;
-    left: 50%;
-    transform: translateX(-50%);
+    top: 8px;
+    left: 8px;
+    transform: none;
     z-index: 3;
     font-size: 0.62rem;
     font-weight: 500;
     letter-spacing: 0.01em;
     color: var(--text-secondary);
-    padding: 1px 8px;
+    padding: 2px 8px;
     border-radius: 999px;
     background-color: var(--hover-bg);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
     border: 1px solid var(--border-color);
     white-space: nowrap;
-    max-width: calc(100% - 16px);
+    max-width: calc(100% - 20px);
     overflow: hidden;
     text-overflow: ellipsis;
+    box-shadow: var(--shadow-xs);
 }
 
 .icon-card:hover .icon-category-badge {
@@ -749,6 +789,168 @@ body {
 .toast:not(.hidden) {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
+}
+
+/* ========== Icon Modal (lazy-loaded, frosted glass) ========== */
+.icon-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background-color: rgba(10, 10, 12, 0.45);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity var(--transition-normal), visibility var(--transition-normal);
+}
+
+[data-theme="dark"] .icon-modal-overlay {
+    background-color: rgba(0, 0, 0, 0.55);
+}
+
+.icon-modal-overlay.open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.icon-modal {
+    width: 100%;
+    max-width: 380px;
+    background-color: var(--card-bg);
+    -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+    border: 1px solid var(--border-color-strong);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg), inset 0 1px 0 var(--glass-highlight);
+    padding: 22px 22px 18px;
+    position: relative;
+    transform: translateY(14px) scale(0.97);
+    transition: transform var(--transition-normal);
+}
+
+.icon-modal-overlay.open .icon-modal {
+    transform: translateY(0) scale(1);
+}
+
+.icon-modal-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: var(--hover-bg);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+}
+
+.icon-modal-close svg {
+    width: 15px;
+    height: 15px;
+}
+
+.icon-modal-close:hover {
+    background: var(--active-bg);
+    color: var(--text-color);
+    border-color: var(--border-color-strong);
+}
+
+.icon-modal-icon {
+    width: 140px;
+    height: 140px;
+    margin: 4px auto 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon-modal-icon img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.12));
+}
+
+[data-theme="dark"] .icon-modal-icon img {
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
+}
+
+.icon-modal-info {
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.icon-modal-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-color);
+    word-break: break-word;
+    line-height: 1.4;
+}
+
+.icon-modal-cat {
+    margin-top: 4px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--text-tertiary);
+}
+
+.icon-modal-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.icon-modal-btn {
+    flex: 1;
+    height: 38px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-color);
+    transition: all var(--transition-fast);
+    text-decoration: none;
+    box-sizing: border-box;
+}
+
+.icon-modal-copy {
+    background-color: var(--primary-color);
+    color: var(--primary-contrast);
+    border-color: transparent;
+}
+
+.icon-modal-copy:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.icon-modal-download {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+}
+
+.icon-modal-download:hover {
+    background-color: var(--card-hover-bg);
+    border-color: var(--border-color-strong);
+    transform: translateY(-1px);
+}
+
+body.modal-open .main-content {
+    overflow: hidden;
 }
 
 /* Focus Visible */

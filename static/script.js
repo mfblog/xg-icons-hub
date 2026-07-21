@@ -103,22 +103,23 @@ document.addEventListener('DOMContentLoaded', () => {
         if (mobileCategoryPills) mobileCategoryPills.innerHTML = '';
 
         // Add "All" option for Desktop
-        const allText = `全部 (${allIcons.reduce((sum, cat) => sum + cat.icons.length, 0)})`;
+        const totalCount = allIcons.reduce((sum, cat) => sum + cat.icons.length, 0);
+        const allText = `全部 (${totalCount})`;
         let allLi = null;
         if (topCategoryList) {
             allLi = document.createElement('li');
-            allLi.textContent = allText;
             allLi.dataset.category = 'all';
             allLi.classList.add('active');
+            allLi.innerHTML = `<a class="menu-link"><span class="menu-label">全部</span><span class="menu-count">${totalCount}</span></a>`;
             allLi.addEventListener('click', () => {
                 switchCategory('all', allLi);
             });
             topCategoryList.appendChild(allLi);
         } else if (categoryList) {
             allLi = document.createElement('li');
-            allLi.textContent = allText;
             allLi.dataset.category = 'all';
             allLi.classList.add('active');
+            allLi.innerHTML = `<a class="menu-link"><span class="menu-label">全部</span><span class="menu-count">${totalCount}</span></a>`;
             allLi.addEventListener('click', () => {
                 switchCategory('all', allLi);
             });
@@ -157,8 +158,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (categoryList) {
                 const liSide = document.createElement('li');
-                liSide.textContent = text;
                 liSide.dataset.category = cat.name;
+                liSide.innerHTML = `<a class="menu-link"><span class="menu-label">${cat.name}</span><span class="menu-count">${cat.icons.length}</span></a>`;
                 liSide.addEventListener('click', () => {
                     switchCategory(cat.name, liSide);
                 });
@@ -309,10 +310,28 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         div.addEventListener('click', () => {
-            copyToClipboard(url, displayName);
+            openIconModal(url, displayName, category, filename);
         });
 
         return div;
+    }
+
+    // Lazy-loaded icon modal bridge: loads modal.js on first click, then calls it.
+    function openIconModal(url, displayName, category, filename) {
+        if (window.__xgOpenModal) {
+            window.__xgOpenModal(url, displayName, category, filename);
+            return;
+        }
+        const s = document.createElement('script');
+        s.src = '/static/modal.js';
+        s.onload = () => {
+            if (window.__xgOpenModal) window.__xgOpenModal(url, displayName, category, filename);
+        };
+        s.onerror = () => {
+            // Fallback to copy if the modal fails to load
+            copyToClipboard(url, displayName);
+        };
+        document.body.appendChild(s);
     }
 
     // 5. Search
@@ -363,6 +382,9 @@ document.addEventListener('DOMContentLoaded', () => {
             toast.classList.add('hidden');
         }, 3000);
     }
+
+    // Expose toast so the lazily-loaded modal.js can reuse the frosted-glass toast
+    window.__xgToast = showToast;
 
     // 7. Back to Top
     const backToTopBtn = document.getElementById('backToTop');
