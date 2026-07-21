@@ -7,6 +7,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const loading = document.getElementById('loading');
     const emptyState = document.getElementById('emptyState');
     const toast = document.getElementById('toast');
+    const currentViewTitle = document.getElementById('currentViewTitle');
+    const resultSummary = document.getElementById('resultSummary');
 
     let allIcons = []; // Stores the raw data
     let currentCategory = 'all';
@@ -82,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Error fetching icons:', error);
             loading.innerText = '加载失败，请检查控制台';
+            if (resultSummary) resultSummary.textContent = '读取失败';
         }
     }
 
@@ -110,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
             allLi = document.createElement('li');
             allLi.dataset.category = 'all';
             allLi.classList.add('active');
-            allLi.innerHTML = `<a class="menu-link"><span class="menu-label">全部</span><span class="menu-count">${totalCount}</span></a>`;
+            allLi.innerHTML = `<button type="button" class="menu-link"><span class="menu-label">全部</span><span class="menu-count">${totalCount}</span></button>`;
             allLi.addEventListener('click', () => {
                 switchCategory('all', allLi);
             });
@@ -119,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
             allLi = document.createElement('li');
             allLi.dataset.category = 'all';
             allLi.classList.add('active');
-            allLi.innerHTML = `<a class="menu-link"><span class="menu-label">全部</span><span class="menu-count">${totalCount}</span></a>`;
+            allLi.innerHTML = `<button type="button" class="menu-link"><span class="menu-label">全部</span><span class="menu-count">${totalCount}</span></button>`;
             allLi.addEventListener('click', () => {
                 switchCategory('all', allLi);
             });
@@ -138,8 +141,16 @@ document.addEventListener('DOMContentLoaded', () => {
             allPill.textContent = '全部';
             allPill.dataset.category = 'all';
             allPill.classList.add('active');
+            allPill.setAttribute('role', 'button');
+            allPill.setAttribute('tabindex', '0');
             allPill.addEventListener('click', () => {
                 switchCategory('all', allLi || allPill);
+            });
+            allPill.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    switchCategory('all', allLi || allPill);
+                }
             });
             mobileCategoryPills.appendChild(allPill);
         }
@@ -159,7 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (categoryList) {
                 const liSide = document.createElement('li');
                 liSide.dataset.category = cat.name;
-                liSide.innerHTML = `<a class="menu-link"><span class="menu-label">${cat.name}</span><span class="menu-count">${cat.icons.length}</span></a>`;
+                liSide.innerHTML = `<button type="button" class="menu-link"><span class="menu-label">${cat.name}</span><span class="menu-count">${cat.icons.length}</span></button>`;
                 liSide.addEventListener('click', () => {
                     switchCategory(cat.name, liSide);
                 });
@@ -177,9 +188,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 const pill = document.createElement('li');
                 pill.textContent = cat.name;
                 pill.dataset.category = cat.name;
+                pill.setAttribute('role', 'button');
+                pill.setAttribute('tabindex', '0');
                 pill.addEventListener('click', () => {
                     const target = Array.from((categoryList || topCategoryList)?.children || []).find(li => li.dataset.category === cat.name);
                     switchCategory(cat.name, target || pill);
+                });
+                pill.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        const target = Array.from((categoryList || topCategoryList)?.children || []).find(li => li.dataset.category === cat.name);
+                        switchCategory(cat.name, target || pill);
+                    }
                 });
                 mobileCategoryPills.appendChild(pill);
             }
@@ -243,9 +263,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // 4. Render Icons
     function renderIcons() {
         iconGrid.innerHTML = '';
-        cardIndex = 0; // Reset stagger index on re-render
         const query = searchInput.value.toLowerCase();
-        let hasResults = false;
+        let resultCount = 0;
 
         if (currentCategory === 'all') {
             const aggregated = [];
@@ -258,7 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             aggregated.sort((a, b) => a.displayName.localeCompare(b.displayName, 'zh-CN', { sensitivity: 'base' }) || a.category.localeCompare(b.category, 'zh-CN'));
             aggregated.forEach(item => {
-                hasResults = true;
+                resultCount++;
                 const card = createIconCard(item.category, item.iconName);
                 iconGrid.appendChild(card);
             });
@@ -268,30 +287,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 cat.icons.forEach(iconName => {
                     const displayName = iconName.replace(/\.[^/.]+$/, "");
                     if (query && !displayName.toLowerCase().includes(query)) return;
-                    hasResults = true;
+                    resultCount++;
                     const card = createIconCard(cat.name, iconName);
                     iconGrid.appendChild(card);
                 });
             });
         }
 
-        if (!hasResults) {
+        if (currentViewTitle) {
+            currentViewTitle.textContent = currentCategory === 'all' ? '全部图标' : currentCategory;
+        }
+        if (resultSummary) {
+            resultSummary.textContent = query ? `找到 ${resultCount} 个` : `${resultCount} 个图标`;
+        }
+
+        if (resultCount === 0) {
             emptyState.classList.remove('hidden');
         } else {
             emptyState.classList.add('hidden');
         }
     }
 
-    let cardIndex = 0;
-
     function createIconCard(category, filename) {
         const div = document.createElement('div');
         div.className = 'icon-card';
-
-        // Staggered entrance animation delay (max 300ms)
-        const delay = Math.min(cardIndex * 20, 300);
-        div.style.animationDelay = `${delay}ms`;
-        cardIndex++;
+        div.setAttribute('role', 'button');
+        div.setAttribute('tabindex', '0');
 
         // Construct URL
         const url = `${window.location.origin}/images/${category}/${filename}`;
@@ -311,6 +332,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         div.addEventListener('click', () => {
             openIconModal(url, displayName, category, filename);
+        });
+        div.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                openIconModal(url, displayName, category, filename);
+            }
         });
 
         return div;
