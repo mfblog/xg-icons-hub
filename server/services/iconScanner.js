@@ -46,7 +46,7 @@ function getIcons() {
         const files = fs.readdirSync(categoryPath)
             .filter(file => {
                 const ext = path.extname(file).toLowerCase();
-                return ['.png', '.jpg', '.jpeg', '.gif', '.svg'].includes(ext);
+                return ['.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.avif'].includes(ext);
             })
             .sort(customSort);
 

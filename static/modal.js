@@ -8,6 +8,7 @@
     let previewToggle = null;
     let imgEl = null;
     let nameEl = null;
+    let formatEl = null;
     let catEl = null;
     let categoryBtn = null;
     let copyBtn = null;
@@ -31,7 +32,7 @@
         modalEl.innerHTML =
             '<div class="icon-modal-header">' +
             '<div class="icon-modal-heading">' +
-            '<svg class="icon-modal-heading-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>' +
+            '<svg class="icon-modal-heading-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 7 8.7 2.7a2.41 2.41 0 0 0-3.4 0L2.7 5.3a2.41 2.41 0 0 0 0 3.4L7 13"/><path d="m8 6 2-2"/><path d="m18 16 2-2"/><path d="m17 11 4.3 4.3c.94.94.94 2.46 0 3.4l-2.6 2.6c-.94.94-2.46.94-3.4 0L11 17"/><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>' +
             '<span id="iconModalTitle" class="icon-modal-heading-text"></span>' +
             '</div>' +
             '<button class="icon-modal-close" type="button" aria-label="关闭">' +
@@ -39,7 +40,10 @@
             '</button>' +
             '</div>' +
             '<div class="icon-modal-icon" data-preview-theme="light">' +
-            '<button class="icon-modal-category" type="button"><span>分类：</span><strong class="icon-modal-cat"></strong></button>' +
+            '<div class="icon-modal-meta">' +
+            '<button class="icon-modal-category" type="button"><strong class="icon-modal-cat"></strong></button>' +
+            '<span class="icon-modal-format"></span>' +
+            '</div>' +
             '<button class="icon-modal-preview-toggle" type="button" aria-label="切换为深色预览背景" title="切换预览背景">' +
             '<svg class="preview-toggle-icon preview-toggle-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>' +
             '<svg class="preview-toggle-icon preview-toggle-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>' +
@@ -63,6 +67,7 @@
         previewToggle = modalEl.querySelector('.icon-modal-preview-toggle');
         imgEl = modalEl.querySelector('.icon-modal-icon img');
         nameEl = modalEl.querySelector('.icon-modal-heading-text');
+        formatEl = modalEl.querySelector('.icon-modal-format');
         catEl = modalEl.querySelector('.icon-modal-cat');
         categoryBtn = modalEl.querySelector('.icon-modal-category');
         copyBtn = modalEl.querySelector('.icon-modal-copy');
@@ -150,7 +155,12 @@
         imgEl.alt = displayName;
         imgEl.style.opacity = '';
         nameEl.textContent = displayName;
-        catEl.textContent = category;
+        const formatMatch = (filename || '').match(/\.([^./]+)$/);
+        const format = formatMatch ? formatMatch[1].toUpperCase() : '';
+        formatEl.textContent = format;
+        formatEl.dataset.format = format.toLowerCase();
+        formatEl.classList.toggle('hidden', !format);
+        catEl.textContent = '# ' + category;
         categoryBtn.dataset.category = category;
         categoryBtn.dataset.filename = filename || '';
         categoryBtn.setAttribute('aria-label', `跳转到 ${category} 分类`);

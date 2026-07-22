@@ -1,9 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const iconGrid = document.getElementById('iconGrid');
     const categoryList = document.getElementById('categoryList');
-    const topCategoryList = document.getElementById('topCategoryList');
     const searchInput = document.getElementById('searchInput');
-    const searchShortcut = document.getElementById('searchShortcut');
     const themeToggle = document.getElementById('themeToggle');
     const loading = document.getElementById('loading');
     const emptyState = document.getElementById('emptyState');
@@ -13,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let allIcons = []; // Stores the raw data
     let currentCategory = 'all';
+    let iconNameMeasureFrame = 0;
 
     // 0. Fetch Config
     async function fetchConfig() {
@@ -94,14 +93,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let allCategoryScrollTop = 0;
     const iconScrollArea = document.getElementById('iconScrollArea');
     const mobileCategorySelect = document.getElementById('mobileCategorySelect');
-    const mobileCategoryWrapper = document.querySelector('.mobile-category-wrapper');
-    const mobileCategoryTrigger = document.getElementById('mobileCategoryTrigger');
     const mobileCategoryLabel = document.getElementById('mobileCategoryLabel');
-    const mobileCategoryMenu = document.getElementById('mobileCategoryMenu');
     const siteLogoEl = document.getElementById('siteLogo');
     const siteTitleEl = document.getElementById('siteTitle');
-
-    const mobileCategoryPills = document.getElementById('mobileCategoryPills');
 
     function categoryItemMarkup(label, count) {
         return `<button type="button" class="menu-link"><span class="menu-label">${label}</span><span class="menu-count">${count}</span></button>`;
@@ -109,111 +103,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderCategories() {
         // Clear existing
-        if (categoryList) categoryList.innerHTML = '';
-        if (topCategoryList) topCategoryList.innerHTML = '';
+        categoryList.innerHTML = '';
         mobileCategorySelect.innerHTML = '';
-        mobileCategoryMenu.innerHTML = '';
-        if (mobileCategoryPills) mobileCategoryPills.innerHTML = '';
 
         // Add "All" option for Desktop
         const totalCount = allIcons.reduce((sum, cat) => sum + cat.icons.length, 0);
-        let allLi = null;
-        if (topCategoryList) {
-            allLi = document.createElement('li');
-            allLi.dataset.category = 'all';
-            allLi.classList.add('active');
-            allLi.innerHTML = categoryItemMarkup('全部', totalCount);
-            allLi.addEventListener('click', () => {
-                switchCategory('all', allLi);
-            });
-            topCategoryList.appendChild(allLi);
-        } else if (categoryList) {
-            allLi = document.createElement('li');
-            allLi.dataset.category = 'all';
-            allLi.classList.add('active');
-            allLi.innerHTML = categoryItemMarkup('全部', totalCount);
-            allLi.addEventListener('click', () => {
-                switchCategory('all', allLi);
-            });
-            categoryList.appendChild(allLi);
-        }
+        const allLi = document.createElement('li');
+        allLi.dataset.category = 'all';
+        allLi.classList.add('active');
+        allLi.innerHTML = categoryItemMarkup('全部', totalCount);
+        allLi.addEventListener('click', () => {
+            switchCategory('all', allLi);
+        });
+        categoryList.appendChild(allLi);
 
         // Add "All" option for Mobile
         const allOption = document.createElement('option');
         allOption.value = 'all';
         allOption.textContent = '全部';
         mobileCategorySelect.appendChild(allOption);
-        appendMobileCategoryOption('全部', 'all');
-
-        // Mobile pill: "All"
-        if (mobileCategoryPills) {
-            const allPill = document.createElement('li');
-            allPill.textContent = '全部';
-            allPill.dataset.category = 'all';
-            allPill.classList.add('active');
-            allPill.setAttribute('role', 'button');
-            allPill.setAttribute('tabindex', '0');
-            allPill.addEventListener('click', () => {
-                switchCategory('all', allLi || allPill);
-            });
-            allPill.addEventListener('keydown', (event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    switchCategory('all', allLi || allPill);
-                }
-            });
-            mobileCategoryPills.appendChild(allPill);
-        }
 
         allIcons.forEach(cat => {
-            // Desktop List Item(s)
-            const text = `${cat.name} (${cat.icons.length})`;
-            if (topCategoryList) {
-                const liTop = document.createElement('li');
-                liTop.textContent = text;
-                liTop.dataset.category = cat.name;
-                liTop.addEventListener('click', () => {
-                    switchCategory(cat.name, liTop);
-                });
-                topCategoryList.appendChild(liTop);
-            }
-            if (categoryList) {
-                const liSide = document.createElement('li');
-                liSide.dataset.category = cat.name;
-                liSide.innerHTML = categoryItemMarkup(cat.name, cat.icons.length);
-                liSide.addEventListener('click', () => {
-                    switchCategory(cat.name, liSide);
-                });
-                categoryList.appendChild(liSide);
-            }
+            const liSide = document.createElement('li');
+            liSide.dataset.category = cat.name;
+            liSide.innerHTML = categoryItemMarkup(cat.name, cat.icons.length);
+            liSide.addEventListener('click', () => {
+                switchCategory(cat.name, liSide);
+            });
+            categoryList.appendChild(liSide);
 
             // Mobile Option
             const option = document.createElement('option');
             option.value = cat.name;
             option.textContent = cat.name;
             mobileCategorySelect.appendChild(option);
-            appendMobileCategoryOption(cat.name, cat.name);
 
-            // Mobile Pill
-            if (mobileCategoryPills) {
-                const pill = document.createElement('li');
-                pill.textContent = cat.name;
-                pill.dataset.category = cat.name;
-                pill.setAttribute('role', 'button');
-                pill.setAttribute('tabindex', '0');
-                pill.addEventListener('click', () => {
-                    const target = Array.from((categoryList || topCategoryList)?.children || []).find(li => li.dataset.category === cat.name);
-                    switchCategory(cat.name, target || pill);
-                });
-                pill.addEventListener('keydown', (event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        const target = Array.from((categoryList || topCategoryList)?.children || []).find(li => li.dataset.category === cat.name);
-                        switchCategory(cat.name, target || pill);
-                    }
-                });
-                mobileCategoryPills.appendChild(pill);
-            }
         });
 
         syncMobileCategoryMenu('all');
@@ -231,68 +155,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function appendMobileCategoryOption(label, value) {
-        const option = document.createElement('button');
-        option.type = 'button';
-        option.className = 'mobile-category-option';
-        option.dataset.category = value;
-        option.setAttribute('role', 'option');
-        option.setAttribute('aria-selected', 'false');
-        option.textContent = label;
-        option.addEventListener('click', () => {
-            mobileCategorySelect.value = value;
-            mobileCategorySelect.dispatchEvent(new Event('change', { bubbles: true }));
-            closeMobileCategoryMenu();
-        });
-        mobileCategoryMenu.appendChild(option);
-    }
-
     function syncMobileCategoryMenu(categoryName) {
-        const selectedOption = mobileCategoryMenu.querySelector(`[data-category="${CSS.escape(categoryName)}"]`);
-        if (mobileCategoryLabel) {
-            mobileCategoryLabel.textContent = selectedOption ? selectedOption.textContent : categoryName;
-        }
-        if (mobileCategoryTrigger) {
-            mobileCategoryTrigger.setAttribute('aria-label', `选择分类，当前为 ${categoryName === 'all' ? '全部' : categoryName}`);
-        }
-        mobileCategoryMenu.querySelectorAll('.mobile-category-option').forEach(option => {
-            const isSelected = option.dataset.category === categoryName;
-            option.classList.toggle('active', isSelected);
-            option.setAttribute('aria-selected', String(isSelected));
-        });
+        if (!mobileCategorySelect) return;
+        const label = categoryName === 'all' ? '全部' : categoryName;
+        mobileCategorySelect.setAttribute('aria-label', `选择分类，当前为 ${label}`);
+        if (mobileCategoryLabel) mobileCategoryLabel.textContent = label;
     }
-
-    function setMobileCategoryMenuOpen(open) {
-        if (!mobileCategoryMenu || !mobileCategoryTrigger) return;
-        mobileCategoryMenu.classList.toggle('hidden', !open);
-        mobileCategoryTrigger.setAttribute('aria-expanded', String(open));
-    }
-
-    function closeMobileCategoryMenu() {
-        setMobileCategoryMenuOpen(false);
-    }
-
-    mobileCategoryTrigger.addEventListener('click', () => {
-        const isOpen = mobileCategoryTrigger.getAttribute('aria-expanded') === 'true';
-        setMobileCategoryMenuOpen(!isOpen);
-    });
-
-    mobileCategoryTrigger.addEventListener('keydown', event => {
-        if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            setMobileCategoryMenuOpen(true);
-        }
-    });
-
-    document.addEventListener('click', event => {
-        if (mobileCategoryWrapper && !mobileCategoryWrapper.contains(event.target)) {
-            closeMobileCategoryMenu();
-        }
-    });
-
-    document.addEventListener('keydown', event => {
-        if (event.key === 'Escape') closeMobileCategoryMenu();
-    });
 
     function switchCategory(categoryName, activeElement) {
         // Save scroll position if we are currently on 'all'
@@ -330,8 +198,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 card.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 setTimeout(() => {
                     if (!card.isConnected) return;
-                    card.classList.remove('locate-flash');
-                    requestAnimationFrame(() => card.classList.add('locate-flash'));
+                    card.classList.add('locate-target');
+                    setTimeout(() => card.classList.remove('locate-target'), 2200);
                 }, 550);
             }
         }
@@ -339,24 +207,34 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function updateActiveCategory(activeElement) {
-        document.querySelectorAll('.category-nav li, .top-category-nav li').forEach(el => el.classList.remove('active'));
+        categoryList.querySelectorAll('li').forEach(el => el.classList.remove('active'));
         activeElement.classList.add('active');
-
-        // Sync mobile pills active state
-        if (mobileCategoryPills) {
-            const cat = activeElement.dataset && activeElement.dataset.category ? activeElement.dataset.category : 'all';
-            mobileCategoryPills.querySelectorAll('li').forEach(p => {
-                p.classList.toggle('active', p.dataset.category === cat);
-            });
-            // Scroll active pill into view
-            const activePill = mobileCategoryPills.querySelector('li.active');
-            if (activePill && activePill.scrollIntoView) {
-                activePill.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-            }
-        }
     }
 
     // 4. Render Icons
+    function measureOverflowingIconNames() {
+        iconNameMeasureFrame = 0;
+        iconGrid.querySelectorAll('.icon-name').forEach(label => {
+            const text = label.querySelector('span');
+            if (!text) return;
+
+            const overflow = Math.max(0, text.scrollWidth - label.clientWidth);
+            const isOverflowing = overflow > 1;
+            label.classList.toggle('is-overflowing', isOverflowing);
+
+            if (isOverflowing) {
+                label.style.setProperty('--name-scroll-distance', `${overflow}px`);
+            } else {
+                label.style.removeProperty('--name-scroll-distance');
+            }
+        });
+    }
+
+    function scheduleIconNameMeasure() {
+        if (iconNameMeasureFrame) cancelAnimationFrame(iconNameMeasureFrame);
+        iconNameMeasureFrame = requestAnimationFrame(measureOverflowingIconNames);
+    }
+
     function renderIcons() {
         iconGrid.innerHTML = '';
         const query = searchInput.value.toLowerCase();
@@ -402,6 +280,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             emptyState.classList.add('hidden');
         }
+
+        scheduleIconNameMeasure();
     }
 
     function createIconCard(category, filename) {
@@ -419,7 +299,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const displayName = filename.replace(/\.[^/.]+$/, "");
 
         div.innerHTML = `
-            <div class="icon-category-badge" aria-hidden="true">${category}</div>
             <div class="icon-img-wrapper">
                 <img src="${url}" alt="${filename}" loading="lazy" onerror="this.src='/static/favicon.ico';this.style.opacity=0.5;">
             </div>
@@ -462,11 +341,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // 5. Search
     const clearSearchBtn = document.getElementById('clearSearch');
 
-    const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
-    const shortcutLabel = isMac ? '⌘K' : 'Ctrl K';
-    const shortcutKey = searchShortcut?.querySelector('kbd');
-    if (shortcutKey) shortcutKey.textContent = shortcutLabel;
-
     function focusSearch() {
         if (document.body.classList.contains('modal-open')) return;
         searchInput.focus();
@@ -476,7 +350,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function toggleClearBtn() {
         const hasValue = searchInput.value.length > 0;
         clearSearchBtn.classList.toggle('hidden', !hasValue);
-        if (searchShortcut) searchShortcut.classList.toggle('hidden', hasValue);
     }
 
     searchInput.addEventListener('input', () => {
@@ -491,7 +364,6 @@ document.addEventListener('DOMContentLoaded', () => {
         searchInput.focus();
     });
 
-    if (searchShortcut) searchShortcut.addEventListener('click', focusSearch);
     document.addEventListener('keydown', (event) => {
         if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
             event.preventDefault();
@@ -552,6 +424,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (siteLogoEl) siteLogoEl.addEventListener('click', scrollTopViaLogo);
     if (siteTitleEl) siteTitleEl.addEventListener('click', scrollTopViaLogo);
+
+    if ('ResizeObserver' in window) {
+        const iconGridResizeObserver = new ResizeObserver(scheduleIconNameMeasure);
+        iconGridResizeObserver.observe(iconGrid);
+    } else {
+        window.addEventListener('resize', scheduleIconNameMeasure);
+    }
 
     // Init
     fetchConfig();
