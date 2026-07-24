@@ -9,9 +9,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentViewTitle = document.getElementById('currentViewTitle');
     const resultSummary = document.getElementById('resultSummary');
 
+    const INITIAL_ICON_BATCH_SIZE = 88;
+    const ICON_BATCH_SIZE = 48;
+
     let allIcons = []; // Stores the raw data
     let currentCategory = 'all';
     let iconNameMeasureFrame = 0;
+    let filteredIcons = [];
+    let renderedIconCount = 0;
+    let iconRenderVersion = 0;
+    let scheduledIconBatch = 0;
+    let allCategoryRenderedCount = 0;
 
     // 0. Fetch Config
     async function fetchConfig() {
@@ -164,9 +172,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function switchCategory(categoryName, activeElement) {
         // Save scroll position if we are currently on 'all'
-        if (currentCategory === 'all') {
+        if (currentCategory === 'all' && categoryName !== 'all') {
             allCategoryScrollTop = iconScrollArea.scrollTop;
+            allCategoryRenderedCount = renderedIconCount;
         }
+
+        const restoreAllCategory = categoryName === 'all' && currentCategory !== 'all';
 
         currentCategory = categoryName;
         
@@ -177,7 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
         mobileCategorySelect.value = categoryName;
         syncMobileCategoryMenu(categoryName);
 
-        renderIcons();
+        renderIcons(restoreAllCategory ? Math.max(INITIAL_ICON_BATCH_SIZE, allCategoryRenderedCount) : INITIAL_ICON_BATCH_SIZE);
 
         // Restore or Reset scroll position
         if (currentCategory === 'all') {
@@ -192,17 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!target) return false;
         switchCategory(categoryName, target);
 
-        if (filename) {
-            const card = Array.from(iconGrid.children).find(item => item.dataset.filename === filename);
-            if (card) {
-                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                setTimeout(() => {
-                    if (!card.isConnected) return;
-                    card.classList.add('locate-target');
-                    setTimeout(() => card.classList.remove('locate-target'), 2200);
-                }, 550);
-            }
-        }
+        if (filename) locateIconCard(categoryName, filename);
         return true;
     };
 
@@ -235,38 +236,47 @@ document.addEventListener('DOMContentLoaded', () => {
         iconNameMeasureFrame = requestAnimationFrame(measureOverflowingIconNames);
     }
 
-    function renderIcons() {
-        iconGrid.innerHTML = '';
+    function getFilteredIcons() {
         const query = searchInput.value.toLowerCase();
-        let resultCount = 0;
+        const items = [];
+
+        allIcons.forEach(cat => {
+            if (currentCategory !== 'all' && cat.name !== currentCategory) return;
+
+            cat.icons.forEach(filename => {
+                const displayName = filename.replace(/\.[^/.]+$/, '');
+                if (query && !displayName.toLowerCase().includes(query)) return;
+
+                items.push({
+                    category: cat.name,
+                    filename,
+                    displayName,
+                    url: `${window.location.origin}/images/${cat.name}/${filename}`
+                });
+            });
+        });
 
         if (currentCategory === 'all') {
-            const aggregated = [];
-            allIcons.forEach(cat => {
-                cat.icons.forEach(iconName => {
-                    const displayName = iconName.replace(/\.[^/.]+$/, "");
-                    if (query && !displayName.toLowerCase().includes(query)) return;
-                    aggregated.push({ category: cat.name, iconName, displayName });
-                });
-            });
-            aggregated.sort((a, b) => a.displayName.localeCompare(b.displayName, 'zh-CN', { sensitivity: 'base' }) || a.category.localeCompare(b.category, 'zh-CN'));
-            aggregated.forEach(item => {
-                resultCount++;
-                const card = createIconCard(item.category, item.iconName);
-                iconGrid.appendChild(card);
-            });
-        } else {
-            allIcons.forEach(cat => {
-                if (cat.name !== currentCategory) return;
-                cat.icons.forEach(iconName => {
-                    const displayName = iconName.replace(/\.[^/.]+$/, "");
-                    if (query && !displayName.toLowerCase().includes(query)) return;
-                    resultCount++;
-                    const card = createIconCard(cat.name, iconName);
-                    iconGrid.appendChild(card);
-                });
-            });
+            items.sort((a, b) => a.displayName.localeCompare(b.displayName, 'zh-CN', { sensitivity: 'base' }) || a.category.localeCompare(b.category, 'zh-CN'));
         }
+
+        return items;
+    }
+
+    function renderIcons(initialCount = INITIAL_ICON_BATCH_SIZE) {
+        if (scheduledIconBatch) {
+            cancelAnimationFrame(scheduledIconBatch);
+            scheduledIconBatch = 0;
+        }
+
+        iconRenderVersion++;
+        iconGrid.innerHTML = '';
+        filteredIcons = getFilteredIcons();
+        renderedIconCount = 0;
+        appendIconCards(initialCount);
+
+        const resultCount = filteredIcons.length;
+        const query = searchInput.value.toLowerCase();
 
         if (currentViewTitle) {
             currentViewTitle.textContent = currentCategory === 'all' ? '全部图标' : `分类：${currentCategory}`;
@@ -284,19 +294,60 @@ document.addEventListener('DOMContentLoaded', () => {
         scheduleIconNameMeasure();
     }
 
-    function createIconCard(category, filename) {
+    function appendIconCards(count) {
+        if (renderedIconCount >= filteredIcons.length) return;
+
+        const fragment = document.createDocumentFragment();
+        const end = Math.min(renderedIconCount + count, filteredIcons.length);
+
+        for (let index = renderedIconCount; index < end; index++) {
+            fragment.appendChild(createIconCard(filteredIcons[index], index));
+        }
+
+        iconGrid.appendChild(fragment);
+        renderedIconCount = end;
+        if (currentCategory === 'all') allCategoryRenderedCount = renderedIconCount;
+        scheduleIconNameMeasure();
+    }
+
+    function queueNextIconBatch() {
+        if (scheduledIconBatch || renderedIconCount >= filteredIcons.length) return;
+
+        const renderVersion = iconRenderVersion;
+        scheduledIconBatch = requestAnimationFrame(() => {
+            scheduledIconBatch = 0;
+            if (renderVersion !== iconRenderVersion) return;
+            appendIconCards(ICON_BATCH_SIZE);
+        });
+    }
+
+    function locateIconCard(category, filename) {
+        const index = filteredIcons.findIndex(item => item.category === category && item.filename === filename);
+        if (index < 0) return;
+
+        if (index >= renderedIconCount) {
+            appendIconCards(Math.max(ICON_BATCH_SIZE, index - renderedIconCount + 1));
+        }
+
+        const card = Array.from(iconGrid.children).find(item => item.dataset.category === category && item.dataset.filename === filename);
+        if (!card) return;
+
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => {
+            if (!card.isConnected) return;
+            card.classList.add('locate-target');
+            setTimeout(() => card.classList.remove('locate-target'), 2200);
+        }, 550);
+    }
+
+    function createIconCard(item, index) {
+        const { category, filename, displayName, url } = item;
         const div = document.createElement('div');
         div.className = 'icon-card';
         div.dataset.category = category;
         div.dataset.filename = filename;
         div.setAttribute('role', 'button');
         div.setAttribute('tabindex', '0');
-
-        // Construct URL
-        const url = `${window.location.origin}/images/${category}/${filename}`;
-
-        // Display Name (hide extension)
-        const displayName = filename.replace(/\.[^/.]+$/, "");
 
         div.innerHTML = `
             <div class="icon-img-wrapper">
@@ -308,34 +359,24 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         div.addEventListener('click', () => {
-            openIconModal(url, displayName, category, filename);
+            openIconModal(item, index);
         });
         div.addEventListener('keydown', (event) => {
             if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault();
-                openIconModal(url, displayName, category, filename);
+                openIconModal(item, index);
             }
         });
 
         return div;
     }
 
-    // Lazy-loaded icon modal bridge: loads modal.js on first click, then calls it.
-    function openIconModal(url, displayName, category, filename) {
+    function openIconModal(item, index) {
         if (window.__xgOpenModal) {
-            window.__xgOpenModal(url, displayName, category, filename);
+            window.__xgOpenModal(item, filteredIcons, index);
             return;
         }
-        const s = document.createElement('script');
-        s.src = '/static/modal.js';
-        s.onload = () => {
-            if (window.__xgOpenModal) window.__xgOpenModal(url, displayName, category, filename);
-        };
-        s.onerror = () => {
-            // Fallback to copy if the modal fails to load
-            copyToClipboard(url, displayName);
-        };
-        document.body.appendChild(s);
+        copyToClipboard(item.url, item.displayName);
     }
 
     // 5. Search
@@ -375,7 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function copyToClipboard(text, label) {
         try {
             await navigator.clipboard.writeText(text);
-            showToast(`已复制：${label || text}`);
+            showToast(`已复制：${label || text}`, 'success');
         } catch (err) {
             console.error('Failed to copy: ', err);
             // Fallback
@@ -383,21 +424,35 @@ document.addEventListener('DOMContentLoaded', () => {
             textArea.value = text;
             document.body.appendChild(textArea);
             textArea.select();
-            document.execCommand("Copy");
+            let copied = false;
+            try {
+                copied = document.execCommand("Copy");
+            } catch (fallbackError) {
+                console.error('Fallback copy failed: ', fallbackError);
+            }
             textArea.remove();
-            showToast(`已复制：${label || text}`);
+            showToast(copied ? `已复制：${label || text}` : '复制失败，请重试', copied ? 'success' : 'error');
         }
     }
 
-    function showToast(message) {
-        toast.textContent = message;
+    const toastIcons = {
+        success: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>',
+        error: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>',
+        warning: '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>'
+    };
+
+    function showToast(message, type = 'success') {
+        const toastType = toastIcons[type] ? type : 'success';
+        toast.dataset.type = toastType;
+        toast.innerHTML = `${toastIcons[toastType]}<span class="toast-message"></span>`;
+        toast.querySelector('.toast-message').textContent = message;
         toast.classList.remove('hidden');
         setTimeout(() => {
             toast.classList.add('hidden');
         }, 3000);
     }
 
-    // Expose toast so the lazily-loaded modal.js can reuse the frosted-glass toast
+    // Expose toast so modal.js can reuse the frosted-glass toast
     window.__xgToast = showToast;
 
     // 7. Back to Top
@@ -408,6 +463,10 @@ document.addEventListener('DOMContentLoaded', () => {
             backToTopBtn.classList.remove('hidden');
         } else {
             backToTopBtn.classList.add('hidden');
+        }
+
+        if (iconScrollArea.scrollTop + iconScrollArea.clientHeight >= iconScrollArea.scrollHeight - 400) {
+            queueNextIconBatch();
         }
     });
 

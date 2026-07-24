@@ -1,4 +1,4 @@
-/* Icon preview modal, lazily loaded on first icon click. */
+/* Icon preview modal. */
 (function () {
     'use strict';
 
@@ -6,6 +6,9 @@
     let modalEl = null;
     let previewEl = null;
     let previewToggle = null;
+    let openInNewWindowLink = null;
+    let previousButton = null;
+    let nextButton = null;
     let imgEl = null;
     let nameEl = null;
     let formatEl = null;
@@ -16,6 +19,9 @@
     let appWindow = null;
     let lastFocus = null;
     let previewTheme = 'light';
+    let currentIcons = [];
+    let currentIndex = -1;
+    let swipeStart = null;
 
     function build() {
         overlayEl = document.createElement('div');
@@ -44,11 +50,20 @@
             '<button class="icon-modal-category" type="button"><strong class="icon-modal-cat"></strong></button>' +
             '<span class="icon-modal-format"></span>' +
             '</div>' +
+            '<a class="icon-modal-open-external" target="_blank" rel="noopener noreferrer" aria-label="在新窗口打开图标" title="在新窗口打开图标">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 3h6v6"/><path d="m19 3-7 7"/><path d="M19 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6"/></svg>' +
+            '</a>' +
             '<button class="icon-modal-preview-toggle" type="button" aria-label="切换为深色预览背景" title="切换预览背景">' +
             '<svg class="preview-toggle-icon preview-toggle-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>' +
             '<svg class="preview-toggle-icon preview-toggle-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>' +
             '</button>' +
-            '<img alt="" />' +
+            '<button class="icon-modal-nav icon-modal-nav-previous" type="button" aria-label="上一个图标" title="上一个图标">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>' +
+            '</button>' +
+            '<button class="icon-modal-nav icon-modal-nav-next" type="button" aria-label="下一个图标" title="下一个图标">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>' +
+            '</button>' +
+            '<img alt="" fetchpriority="high" draggable="false" />' +
             '</div>' +
             '<div class="icon-modal-actions">' +
             '<button class="icon-modal-btn icon-modal-copy" type="button">' +
@@ -65,6 +80,9 @@
 
         previewEl = modalEl.querySelector('.icon-modal-icon');
         previewToggle = modalEl.querySelector('.icon-modal-preview-toggle');
+        openInNewWindowLink = modalEl.querySelector('.icon-modal-open-external');
+        previousButton = modalEl.querySelector('.icon-modal-nav-previous');
+        nextButton = modalEl.querySelector('.icon-modal-nav-next');
         imgEl = modalEl.querySelector('.icon-modal-icon img');
         nameEl = modalEl.querySelector('.icon-modal-heading-text');
         formatEl = modalEl.querySelector('.icon-modal-format');
@@ -81,6 +99,14 @@
         copyBtn.addEventListener('click', onCopy);
         previewToggle.addEventListener('click', togglePreviewTheme);
         categoryBtn.addEventListener('click', openCategory);
+        previousButton.addEventListener('click', () => navigate(-1));
+        nextButton.addEventListener('click', () => navigate(1));
+        previewEl.addEventListener('pointerdown', onPreviewPointerDown);
+        previewEl.addEventListener('pointerup', onPreviewPointerUp);
+        previewEl.addEventListener('pointercancel', clearPreviewSwipe);
+        imgEl.addEventListener('animationend', () => {
+            imgEl.classList.remove('icon-preview-enter-from-left', 'icon-preview-enter-from-right');
+        });
 
         imgEl.addEventListener('error', function () {
             imgEl.src = '/static/favicon.ico';
@@ -91,8 +117,16 @@
     }
 
     function onKeydown(event) {
-        if (event.key === 'Escape' && overlayEl && overlayEl.classList.contains('open')) {
+        if (!overlayEl || !overlayEl.classList.contains('open')) return;
+
+        if (event.key === 'Escape') {
             close();
+        } else if (event.key === 'ArrowLeft') {
+            event.preventDefault();
+            navigate(-1);
+        } else if (event.key === 'ArrowRight') {
+            event.preventDefault();
+            navigate(1);
         }
     }
 
@@ -109,6 +143,30 @@
         setPreviewTheme(previewTheme === 'light' ? 'dark' : 'light');
     }
 
+    function onPreviewPointerDown(event) {
+        if (event.target.closest('button, a')) return;
+        swipeStart = { id: event.pointerId, x: event.clientX, y: event.clientY };
+        previewEl.classList.add('is-dragging');
+        previewEl.setPointerCapture(event.pointerId);
+    }
+
+    function onPreviewPointerUp(event) {
+        if (!swipeStart || swipeStart.id !== event.pointerId) return;
+
+        const deltaX = event.clientX - swipeStart.x;
+        const deltaY = event.clientY - swipeStart.y;
+        previewEl.releasePointerCapture(event.pointerId);
+        clearPreviewSwipe();
+
+        if (Math.abs(deltaX) < 40 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+        navigate(deltaX < 0 ? 1 : -1);
+    }
+
+    function clearPreviewSwipe() {
+        swipeStart = null;
+        if (previewEl) previewEl.classList.remove('is-dragging');
+    }
+
     function openCategory() {
         const category = categoryBtn.dataset.category || '';
         const filename = categoryBtn.dataset.filename || '';
@@ -123,14 +181,14 @@
         const name = nameEl.textContent || '';
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(url).then(function () {
-                toast('已复制：' + name);
+                toast('已复制：' + name, 'success');
             }).catch(function () {
-                legacyCopy(url);
-                toast('已复制：' + name);
+                const copied = legacyCopy(url);
+                toast(copied ? '已复制：' + name : '复制失败，请重试', copied ? 'success' : 'error');
             });
         } else {
-            legacyCopy(url);
-            toast('已复制：' + name);
+            const copied = legacyCopy(url);
+            toast(copied ? '已复制：' + name : '复制失败，请重试', copied ? 'success' : 'error');
         }
     }
 
@@ -141,16 +199,26 @@
         textarea.style.opacity = '0';
         document.body.appendChild(textarea);
         textarea.select();
-        try { document.execCommand('copy'); } catch (error) {}
+        let copied = false;
+        try { copied = document.execCommand('copy'); } catch (error) {}
         document.body.removeChild(textarea);
+        return copied;
     }
 
-    function toast(message) {
-        if (window.__xgToast) window.__xgToast(message);
+    function toast(message, type) {
+        if (window.__xgToast) window.__xgToast(message, type);
     }
 
-    function open(url, displayName, category, filename) {
-        if (!overlayEl) build();
+    function updateNavigationControls() {
+        previousButton.setAttribute('aria-disabled', String(currentIndex <= 0));
+        nextButton.setAttribute('aria-disabled', String(currentIndex < 0 || currentIndex >= currentIcons.length - 1));
+    }
+
+    function updateIcon(item, direction) {
+        const { url, displayName, category, filename } = item;
+        imgEl.classList.remove('icon-preview-enter-from-left', 'icon-preview-enter-from-right');
+        if (direction) void imgEl.offsetWidth;
+
         imgEl.src = url;
         imgEl.alt = displayName;
         imgEl.style.opacity = '';
@@ -167,6 +235,42 @@
         copyBtn.dataset.url = url;
         downloadLink.href = url;
         downloadLink.setAttribute('download', filename || displayName);
+        openInNewWindowLink.href = url;
+        openInNewWindowLink.setAttribute('aria-label', `在新窗口打开 ${displayName}`);
+        openInNewWindowLink.setAttribute('title', `在新窗口打开 ${displayName}`);
+        updateNavigationControls();
+
+        if (direction) {
+            imgEl.classList.add(direction > 0 ? 'icon-preview-enter-from-right' : 'icon-preview-enter-from-left');
+        }
+    }
+
+    function navigate(direction) {
+        const nextIndex = currentIndex + direction;
+        if (nextIndex < 0) {
+            toast('前面没有图标了！', 'warning');
+            return;
+        }
+        if (nextIndex >= currentIcons.length) {
+            toast('后面没有图标了！', 'warning');
+            return;
+        }
+
+        currentIndex = nextIndex;
+        updateIcon(currentIcons[currentIndex], direction);
+    }
+
+    function open(item, icons, index) {
+        if (!overlayEl) build();
+
+        currentIcons = Array.isArray(icons) && icons.length ? icons : [item];
+        currentIndex = Number.isInteger(index) && currentIcons[index] === item ? index : currentIcons.indexOf(item);
+        if (currentIndex < 0) {
+            currentIcons = [item];
+            currentIndex = 0;
+        }
+
+        updateIcon(currentIcons[currentIndex]);
         setPreviewTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
         lastFocus = document.activeElement;
         overlayEl.inert = false;

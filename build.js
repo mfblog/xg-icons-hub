@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { minify } = require('terser');
 const { getIcons } = require('./server/services/iconScanner');
 const { applyHtml } = require('./server/services/htmlTemplate');
 
@@ -77,4 +78,21 @@ html = applyHtml(html, config);
 fs.writeFileSync(path.join(DIST_DIR, 'index.html'), html);
 console.log('Copied index.html');
 
-console.log('Build complete! Output directory: dist');
+// 5. Minify JavaScript in build output only
+Promise.all(['script.js', 'modal.js'].map(async (filename) => {
+    const outputPath = path.join(DIST_DIR, 'static', filename);
+    const source = fs.readFileSync(outputPath, 'utf-8');
+    const result = await minify(source, { compress: true, mangle: true });
+
+    if (!result.code) {
+        throw new Error(`Failed to minify ${filename}`);
+    }
+
+    fs.writeFileSync(outputPath, result.code);
+})).then(() => {
+    console.log('Minified JavaScript');
+    console.log('Build complete! Output directory: dist');
+}).catch((error) => {
+    console.error('Build failed while minifying JavaScript:', error);
+    process.exitCode = 1;
+});

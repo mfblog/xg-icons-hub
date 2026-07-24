@@ -22,11 +22,11 @@
     "url": "https://github.com/verkyer/xg-icons-hub/issues"
   },
   "homepage": "https://github.com/verkyer/xg-icons-hub#readme",
-  "dependencies": {},
   "devDependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "terser": "^5.49.0"
   },
   "engines": {
     "node": ">=16"
